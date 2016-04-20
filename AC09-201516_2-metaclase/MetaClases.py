@@ -2,6 +2,9 @@ import functools
 
 class MetaRobot(type):
     def __new__(cls, cls_name, bases, attrs):
+        # Coroborrar cls_name es Robot, tirar error si no
+        if cls_name != 'Robot':
+            raise AttributeError('Clase no es Robot')
         # Agregar creador y ip_inicio como atributos de la clase
         # Suponga creador id = 123
         # ip_inicio = 190.102.62.283

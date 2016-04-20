@@ -48,3 +48,6 @@ if __name__ == '__main__':
     robocop6.cambiar_nodo(puertos[randint(0, 9)])
     print('Puerto cambiado: {0}'.format(robocop6.actual.ide))
     robocop6.cortar_conexion()
+
+    # Intentar crear nueva clase de MetaRobot
+    new_cls = MetaRobot('Hello', (MetaRobot,), dict())
