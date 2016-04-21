@@ -39,8 +39,28 @@ class Persona(metaclass=RestrictedAccess):
         pass
 
 
+class Singleton(type):
+    instance = None
+
+    def __call__(self, *args, **kwargs):
+        if self.instance is None:
+            self.instance = super().__call__(*args, **kwargs)
+        return self.instance
+
+
+class A(metaclass=Singleton):
+    def __init__(self, value):
+        self.val = value
+
+
 if __name__ == '__main__':
     p1 = Persona('Bruce', 'Wayne', 'Batman')
     print(p1.name , p1. lastname , "es", p1.alias , "!")
+
+    a = A(10)
+    b = A(20)
+
+    print(a.val, b.val)
+    print(a is b)
 
 
