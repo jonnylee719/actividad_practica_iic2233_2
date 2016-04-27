@@ -13,32 +13,51 @@ class Bummer:
 
     def ingresar(self, usuario, clave):
         if not self.conectado:
-            if self.alumnos[usuario].clave == clave:
-                self.usuario_actual = self.alumnos[usuario]
-                self.conectado = True
-                print("se conecto {0}".format(self.usuario_actual.usuario))
+            try:
+                if self.alumnos[usuario].clave == clave:
+                    self.usuario_actual = self.alumnos[usuario]
+                    self.conectado = True
+                    print("se conecto {0}".format(self.usuario_actual.usuario))
+            except KeyError as ke:
+                print('No tiene el usuario: {0}'.format(ke.args[0]))
 
     def inscribir_ramo(self, numero):
         if self.conectado:
-            ramo_inscribir = self.ramos[numero]
-            if ramo_inscribir.vacantes > 0:
-                self.usuario_actual.agregar_ramos(ramo_inscribir)
-                print("Se inscribio el curso de sigla {0} a {1}".format(ramo_inscribir.sigla,
-                                                                        self.usuario_actual.usuario))
+            try:
+                ramo_inscribir = self.ramos[numero]
+                if ramo_inscribir.vacantes > 0:
+                    self.usuario_actual.agregar_ramos(ramo_inscribir)
+                    print("Se inscribio el curso de sigla {0} a {1}".format(ramo_inscribir.sigla,
+                                                                            self.usuario_actual.usuario))
+            except IndexError as ie:
+                print('No ha inscrito el ramo {0}'.format(numero))
+            except TypeError as te:
+                print('Index type error: {0} no es un int'.format(numero))
 
     def quitar_ramo(self, numero):
         if self.conectado:
-            ramo_quitar = self.ramos[numero]
-            self.usuario_actual.quitar_ramos(ramo_quitar.sigla)
-            print("Se quito el curso de sigla {0} de la carga academica de {1}".format(ramo_quitar.sigla,
-                                                                                       self.usuario_actual.usuario))
+            try:
+                ramo_quitar = self.ramos[numero]
+                self.usuario_actual.quitar_ramos(ramo_quitar.sigla)
+                print("Se quito el curso de sigla {0} de la carga academica de {1}".format(ramo_quitar.sigla,
+                                                                                           self.usuario_actual.usuario))
+            except TypeError as te:
+                print('Error: {0}'.format(te))
+                print('Indice de la lista no es un int: {0}'.format(numero))
+            except IndexError as ie:
+                print('Error: {0}'.format(ie))
+                print('No tiene el indice: {0}'.format(numero))
 
     def calificar(self, numero, nota):
         if self.conectado:
-            ramo = self.ramos[numero]
-            self.usuario_actual.calificar_curso(ramo.sigla, nota)
-            print("Se califico a {} en el curso {} con la nota {}".format(self.usuario_actual.usuario, ramo.sigla,
-                                                                          nota))
+            try:
+                ramo = self.ramos[numero]
+                self.usuario_actual.calificar_curso(ramo.sigla, nota)
+                print("Se califico a {} en el curso {} con la nota {}".format(self.usuario_actual.usuario, ramo.sigla,
+                                                                              nota))
+            except IndexError as ie:
+                print('Error: {0}'.format(ie))
+                print('No tiene el indice: {0}'.format(numero))
 
 """
 
@@ -72,13 +91,22 @@ class Alumno:
         ramo.inscrito(self)
 
     def quitar_ramos(self, sigla):
-        del self.ramos[sigla]
+        try:
+            del self.ramos[sigla]
+        except KeyError as ke:
+            print('No tiene la sigla {0}'.format(sigla))
 
     def calificar_curso(self, sigla, nota):
-        ramo = self.ramos[sigla]
-        nota = float(nota)
-        self.ramos_aprobados[sigla] = (ramo, nota)
-
+        try:
+            ramo = self.ramos[sigla]
+            nota = float(nota)
+            self.ramos_aprobados[sigla] = (ramo, nota)
+        except ValueError as ve:
+            print('Error: {0}'.format(ve))
+            print('No puede convertir {0} a float'.format(nota))
+        except KeyError as ke:
+            print('Error: {0}'.format(ke))
+            print('No tiene el clave: {0}'.format(sigla))
 
 if __name__ == '__main__':
     bummer = Bummer()
