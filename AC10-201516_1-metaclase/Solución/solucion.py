@@ -100,7 +100,7 @@ class MetaOpt(type):
         return OrderedDict()
 
     def __new__(cls, clsname, bases, clsdict):
-
+        print('Dictionary type: {0}'.format(clsdict.__class__.__name__))
         # Guarda los nombres de atributos para poder construir la función
         # '__call__'
         attributes = list()
@@ -140,3 +140,4 @@ class Person(metaclass=MetaOpt):
 p1 = Person('Marco', 20, 'male', ('Belen', 'Pato', 'Jaime', 'Rodrigo'))
 
 print(p1.name, p1.age, p1.gender, p1.friends, sep='\n')
+
