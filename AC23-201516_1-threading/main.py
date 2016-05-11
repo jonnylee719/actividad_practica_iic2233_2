@@ -9,10 +9,12 @@ class MegaGodzilla(threading.Thread):
     ###
     # Tienen que completar la clase (piensen en los locks necesarios)
     ###
+    gozilla_lock = threading.Lock()
 
     def __init__(self, hp):
         super().__init__()
         self.hp = hp
+        self.soldados = []
 
     @property
     def vivo(self):
@@ -23,6 +25,22 @@ class MegaGodzilla(threading.Thread):
     ###
     # Tienen que programar el método run
     ###
+    def run(self):
+        while True:
+            s_vivo = list(filter(lambda s: s.vivo, self.soldados))
+            if len(s_vivo) > 0:
+                # Hay soldados vivo
+                rand_ataque = random.random()
+                if rand_ataque < 0.7:
+                    # ataque normal
+                    self.ataque_normal()
+                else:
+                    self.ataque_ultima()
+                # descansar despues el ataque
+                time.sleep(random.randint(3, 6))
+            else:
+                # Todos los soldados estan muertos
+                return
 
     def atacado(self, soldado):
         self.hp -= soldado.ataque
@@ -38,6 +56,17 @@ class MegaGodzilla(threading.Thread):
     ###
     # Programar método atacar
     ###
+    def ataque_normal(self):
+        for s in self.soldados:
+            # Hace 3 danos a cada soldado
+            if s.vivo:
+                s.atacado(3)
+
+    def ataque_ultima(self):
+        Soldado.inmovilizado = True
+        for s in self.soldados:
+            if s.vivo:
+                s.atacado(6)
 
 
 class Soldado(threading.Thread):
@@ -45,6 +74,9 @@ class Soldado(threading.Thread):
     ###
     # Tienen que completar la clase (piensen en los locks necesarios)
     ###
+    # Lock para soldados ataqas
+    lock_soldado = threading.Lock()
+    inmovilizado = False
 
     def __init__(self, MegaGodzilla, velocidad, hp, ataque):
         super().__init__()
@@ -63,6 +95,18 @@ class Soldado(threading.Thread):
     ###
     # Tienen que programar el método run
     ###
+    def run(self):
+        # metodo para ejecutar en thread.start()
+        with Soldado.lock_soldado:
+            if Soldado.inmovilizado:
+                time.sleep(10)
+                Soldado.inmovilizado = False
+            # hace el ataque si tiene lock
+            self.MegaGodzilla.atacado(self)
+            # la duracion del ataque
+            time.sleep(random.randint(1, 3))
+        # Descansar despues el ataque
+        time.sleep(random.randint(4, 19))
 
     def atacado(self, ataque):
         self.hp -= ataque
@@ -86,3 +130,13 @@ if __name__ == "__main__":
     ###
     # Tienen que programar el main completo
     ###
+    gozilla = MegaGodzilla(100)
+    soldados = []
+    for __ in range(0, 10):
+        # 10 soldados
+        s = Soldado(gozilla, 2, 50, 2)
+        s.start()
+        soldados.append(s)
+    gozilla.soldados = soldados
+    gozilla.start()
+
