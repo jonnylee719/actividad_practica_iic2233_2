@@ -2,10 +2,12 @@
 #-*- coding:utf-8 -*-
 
 from PyQt4 import QtCore, QtGui
-import datetime
+from PyQt4.QtCore import *
+from datetime import datetime
 import pickle
 import os
 import functools as func
+import json
 
 # Usted debe:
 # Escribir la clase Cliente
@@ -14,40 +16,80 @@ import functools as func
 # Completar el método 'on_pushButton_clicked' de la clase 'Input'
 
 class Cliente:
-    def __init__(self, nombre, _id, dinero):
-        self.nombre = nombre
-        self._id = _id
-        self.dinero = dinero
+    def __init__(self, ID, Nombre, GastoAcumulado, UltimaCompra=None):
+        if UltimaCompra:
+            assert isinstance(UltimaCompra, datetime)
+        assert isinstance(ID, int)
+        assert isinstance(GastoAcumulado, int)
+        self.ID = ID
+        self.Nombre = Nombre
+        self.GastoAcumulado = GastoAcumulado
+        self.UltimaCompra = UltimaCompra
 
     def __setstate__(self, _dict):
+        if isinstance(_dict['UltimaCompra'], float):
+            print("Setting time stamp")
+            _dict['UltimaCompra'] = datetime.fromtimestamp(_dict['UltimaCompra'])
+        # _dict['ID'] = int(_dict['ID'])
+        # _dict['GastoAcumulado'] = int(_dict['GastoAcumulado'])
         self.__dict__ = _dict
 
     def __getstate__(self):
         state = self.__dict__.copy()
+        if state['UltimaCompra']:
+            state['UltimaCompra'] = datetime.now().timestamp()
+        # state['ID'] = str(state['ID'])
+        # state['GastoAcumulado'] = str(state['GastoAcumulado'])
         return state
+
+    def to_json(self, fname=None):
+        # change datetime to timestamp
+        state = self.__dict__.copy()
+        state['UltimaCompra'] = state['UltimaCompra'].timestamp()
+        if fname:
+            with open(fname, 'w') as file:
+                json.dump(obj=state, fp=file)
+        else:
+            return json.dumps(state)
+
+    @classmethod
+    def from_json(cls, json_str=None, fname=None):
+        if not json_str and not fname:
+            raise ValueError
+        if json_str:
+            _dict = json.loads(json_str)
+        elif fname:
+            with open(fname, 'rb') as file:
+                _dict = json.load(file)
+        # change time stamp
+        return cls(**_dict)
 
     def __eq__(self, obj):
         if not obj:
             return False
         if not isinstance(obj, Cliente):
             return False
-        if obj.nombre != self.nombre:
+        if obj.Nombre != self.Nombre:
             return False
-        if obj._id != self._id:
+        if obj.ID != self.ID:
             return False
-        if obj.dinero != self.dinero:
+        if obj.GastoAcumulado != self.GastoAcumulado:
+            return False
+        if obj.UltimaCompra != self.UltimaCompra:
             return False
         return True
 
     def __repr__(self):
         print(self.__dict__)
-        return 'Cliente id: {s} \nNombre: {c.nombre} \nGastado: {c.dinero}'\
-            .format(s=123, c=self)
+        return 'Cliente id: {c.ID} \nNombre: {c.Nombre} ' \
+               '\nGastado: {c.GastoAcumulado} \nUltima Compra: {compra}'\
+            .format(c=self, compra=self.UltimaCompra)
 
 class VentanaCajero(QtGui.QDialog):
 
     def __init__(self, parent=None, username=""):
         super(VentanaCajero, self).__init__(parent)
+        self.setWindowTitle(username)
 
         self.buttonBox = QtGui.QDialogButtonBox(self)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -78,13 +120,15 @@ class VentanaCajero(QtGui.QDialog):
         print('Files: \n{}'.format(fnames))
         existentes = {fn.split('.')[0]: fn for fn in fnames}
 
-        nombre = self.clienteText.text()
-        _id = self.idText.text()
-        gastado = self.gastadoText.text()
+        nombre = self.clienteText.text().strip()
+        _id = self.idText.text().strip()
+        gastado = self.gastadoText.text().strip()
         if not nombre or not _id or not gastado:
             # si no tiene texto en cualquier edit text, no hace nada
             return
-        nueva_entrada = Cliente(nombre, _id, gastado)
+        if not _id.isdigit() or not gastado.isdigit():
+            return
+        nueva_entrada = Cliente(Nombre=nombre, ID=int(_id), GastoAcumulado=int(gastado))
         existe = False
         if _id in existentes:
             # cliente ya esta en la carpeta
@@ -92,10 +136,10 @@ class VentanaCajero(QtGui.QDialog):
             with open(fname, 'rb') as file:
                 cliente = pickle.load(file)
                 print(cliente)
-                if nueva_entrada == cliente:
-                    existe = True
-                    # actualiza el dinero con nuevo gasto
-                    nueva_entrada.dinero += cliente.dinero
+                existe = True
+                # actualiza el dinero con nuevo gasto
+                cliente.GastoAcumulado += nueva_entrada.GastoAcumulado
+                nueva_entrada = cliente
             print(cliente)
         if not existe:
             fname = 'ClientesDB' + os.sep + _id + '.walkcart'
@@ -124,13 +168,17 @@ class VentanaAdmin(QtGui.QDialog):
         self.horizontalLayout.addWidget(self.cancelButton)
 
     def generarArchivo(self):
-
-        #####
-
-        # Completar
-
-        #####
-        pass
+        fnames = os.listdir('ClientesDB')
+        clientes = []
+        for f in fnames:
+            with open('ClientesDB' + os.sep + f, 'rb') as file:
+                cliente = pickle.load(file)
+                clientes.append(cliente)
+        # sort by GastoAcumulado
+        best_c = max(clientes, key=lambda c: c.GastoAcumulado)
+        # save as json
+        best_c.to_json('TOP.walkcart')
+        print(best_c.to_json())
 
 
 class Input(QtGui.QWidget):
@@ -157,8 +205,11 @@ class Input(QtGui.QWidget):
             # Chaquear el texto en el widget self.userNameText
             nombre = self.userNameText.text()
             if nombre in cajeros_lista:
-                self.window = VentanaCajero()
+                self.window = VentanaCajero(username=nombre)
                 self.window.show()
+            elif nombre == 'WalkcartUnlimited':
+                self.admin = VentanaAdmin()
+                self.admin.show()
 
 
 if __name__ == "__main__":
